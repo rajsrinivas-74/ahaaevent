@@ -13,7 +13,7 @@ export async function GET(
   }
 
   const { data, error } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("*")
     .eq("id", params.id)
@@ -42,7 +42,7 @@ export async function PATCH(
   }
 
   const { data: existing } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("*")
     .eq("id", params.id)
@@ -60,8 +60,8 @@ export async function PATCH(
 
   // Published events: only allow description, tagline, dates
   const allowedFields = existing.status === "draft"
-    ? ["name", "type", "theme", "description", "tagline", "start_date", "end_date", "timezone", "venue_type", "meeting_link", "max_participants", "join_code_mode", "join_code"]
-    : ["description", "tagline", "start_date", "end_date"];
+    ? ["name", "type", "theme", "description", "tagline", "registration_start", "registration_end", "start_date", "end_date", "submission_deadline", "timezone", "venue_type", "meeting_link", "max_participants", "join_code_mode", "join_code", "team_min", "team_max", "eligibility", "contact_email", "tracks", "prizes", "judging_criteria"]
+    : ["description", "tagline", "registration_start", "registration_end", "start_date", "end_date", "submission_deadline", "contact_email"];
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const field of allowedFields) {
@@ -71,7 +71,7 @@ export async function PATCH(
   }
 
   const { data, error } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .update(updates)
     .eq("id", params.id)
@@ -83,4 +83,24 @@ export async function PATCH(
   }
 
   return NextResponse.json(data);
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { data: existing } = await supabase.schema("ahaa").from("events")
+    .select("organiser_id").eq("id", params.id).single();
+
+  if (!existing || existing.organiser_id !== user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { error } = await supabase.schema("ahaa").from("events").delete().eq("id", params.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
 }

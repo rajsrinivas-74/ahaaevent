@@ -13,7 +13,7 @@ export async function GET(
   }
 
   const { data: event } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("organiser_id")
     .eq("id", params.id)
@@ -24,7 +24,7 @@ export async function GET(
   }
 
   let { data: branding } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("event_branding")
     .select("*")
     .eq("event_id", params.id)
@@ -33,7 +33,7 @@ export async function GET(
   // Upsert: create with defaults if not exists
   if (!branding) {
     const { data: newBranding } = await supabase
-      .schema("eventmanager")
+      .schema("ahaa")
       .from("event_branding")
       .insert({
         event_id: params.id,
@@ -62,7 +62,7 @@ export async function PUT(
   }
 
   const { data: event } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("organiser_id")
     .eq("id", params.id)
@@ -75,7 +75,7 @@ export async function PUT(
   const body = await request.json();
 
   const { data, error } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("event_branding")
     .upsert({
       event_id: params.id,

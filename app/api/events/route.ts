@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   const { data, error } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("*")
     .eq("organiser_id", user.id)
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     : generateJoinCode();
 
   const { data, error } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .insert({
       organiser_id: user.id,
@@ -65,6 +65,14 @@ export async function POST(request: NextRequest) {
       join_code: joinCode,
       join_code_mode: body.join_code_mode || "auto",
       status: "draft",
+      submission_deadline: body.submission_deadline || null,
+      team_min: body.team_min || null,
+      team_max: body.team_max || null,
+      eligibility: body.eligibility || null,
+      contact_email: body.contact_email || null,
+      tracks: body.tracks || null,
+      prizes: body.prizes || null,
+      judging_criteria: body.judging_criteria || null,
     })
     .select()
     .single();

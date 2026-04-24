@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
 
   const { data } = await supabase
-    .schema("eventmanager")
+    .schema("ahaa")
     .from("events")
     .select("id")
     .eq("join_code", code)

@@ -36,6 +36,8 @@ export interface Event {
   theme: string | null;
   description: string | null;
   tagline: string | null;
+  registration_start: string | null;
+  registration_end: string | null;
   start_date: string | null;
   end_date: string | null;
   timezone: string;
@@ -48,6 +50,14 @@ export interface Event {
   expires_at: string | null;
   visitor_count: number;
   registration_count: number;
+  submission_deadline: string | null;
+  team_min: number | null;
+  team_max: number | null;
+  eligibility: string | null;
+  contact_email: string | null;
+  tracks: string[] | null;
+  prizes: { place: number; label: string; value: string }[] | null;
+  judging_criteria: { name: string; weight: number; expectations: string }[] | null;
   created_at: string;
   updated_at: string;
 }
