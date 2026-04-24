@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventType, VenueType, JoinCodeMode, FormFieldType } from "@/lib/types";
+import { PublicEventView } from "@/components/public-event-view";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ const STEPS = [
   { label: "Evaluation", emoji: "⭐" },
   { label: "Form",       emoji: "📝" },
   { label: "FAQ",        emoji: "❓" },
+  { label: "Preview",    emoji: "👁" },
   { label: "Publish",    emoji: "🚀" },
 ];
 
@@ -306,6 +308,7 @@ export default function CreateEventWizard() {
     if (step === 2 && eventId) await saveBranding(eventId);
     if (step === 3 && eventId) await saveEvaluation(eventId);
     if (step === 4 && eventId) await saveFormFields(eventId);
+    if (step === 5 && eventId) await saveFaqs(eventId);
 
     setSaving(false);
     setStep(s => s + 1);
@@ -315,7 +318,6 @@ export default function CreateEventWizard() {
   async function handlePublish() {
     if (!eventId) return;
     setSaving(true);
-    await saveFaqs(eventId);
     if (state.publishNow) {
       await fetch(`/api/events/${eventId}/settings`, {
         method: "PATCH",
@@ -380,7 +382,8 @@ export default function CreateEventWizard() {
         {step === 3 && <StepEvaluation state={state} set={set} />}
         {step === 4 && <StepForm state={state} set={set} />}
         {step === 5 && <StepFaq state={state} set={set} />}
-        {step === 6 && <StepPublish state={state} set={set} eventId={eventId} />}
+        {step === 6 && <StepPreview state={state} />}
+        {step === 7 && <StepPublish state={state} set={set} eventId={eventId} />}
       </div>
 
       {/* Navigation */}
@@ -399,9 +402,17 @@ export default function CreateEventWizard() {
             {saving ? "Saving…" : "Next →"}
           </button>
         ) : (
-          <button onClick={handlePublish} disabled={saving} className="btn-primary px-6">
-            {saving ? "Finishing…" : state.publishNow ? "Publish Event 🚀" : "Save as Draft"}
-          </button>
+          (() => {
+            const requiredDone = !!(state.name.trim() && state.description.trim() && state.startDate && state.endDate && state.venueType && state.formFields.length > 0);
+            const blocked = state.publishNow && !requiredDone;
+            return (
+              <button onClick={blocked ? undefined : handlePublish} disabled={saving || blocked}
+                className="btn-primary px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={blocked ? "Complete required fields to publish" : undefined}>
+                {saving ? "Finishing…" : blocked ? "Complete required fields" : state.publishNow ? "Publish Event 🚀" : "Save as Draft"}
+              </button>
+            );
+          })()
         )}
       </div>
     </div>
@@ -917,30 +928,140 @@ function StepFaq({ state, set }: { state: WizardState; set: (p: Partial<WizardSt
 }
 
 // ─── Step 6: Publish ──────────────────────────────────────────────────────────
+// ─── Step 6: Preview ──────────────────────────────────────────────────────────
+function StepPreview({ state }: { state: WizardState }) {
+  const mockEvent = {
+    id: "preview",
+    organiser_id: "",
+    name: state.name || "Your Event Name",
+    type: state.type,
+    theme: state.theme || null,
+    description: state.description || null,
+    tagline: state.tagline || null,
+    start_date: state.startDate || null,
+    end_date: state.endDate || null,
+    timezone: state.timezone,
+    venue_type: state.venueType || null,
+    meeting_link: state.meetingLink || null,
+    max_participants: state.maxParticipants ? parseInt(state.maxParticipants) : null,
+    join_code: "PREVIEW",
+    join_code_mode: state.joinCodeMode,
+    status: "draft" as const,
+    expires_at: null,
+    visitor_count: 0,
+    registration_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    registration_start: null,
+    registration_end: null,
+    submission_deadline: null,
+    team_min: null,
+    team_max: null,
+    eligibility: null,
+    contact_email: null,
+    tracks: null,
+    prizes: state.prizes.length > 0 ? state.prizes : null,
+    judging_criteria: state.criteria.length > 0 ? state.criteria : null,
+  };
+
+  const mockBranding = {
+    id: "preview",
+    event_id: "preview",
+    logo_url: null,
+    banner_url: null,
+    primary_color: state.primaryColor,
+    background_color: state.backgroundColor,
+    accent_color: state.accentColor,
+    font_preset: state.fontPreset,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const mockFaq = state.faqs.map((f, i) => ({
+    id: String(i),
+    event_id: "preview",
+    question: f.question,
+    answer: f.answer,
+    order: i,
+  }));
+
+  const mockFields = state.formFields.map((f, i) => ({
+    id: String(i),
+    event_id: "preview",
+    section_id: null,
+    label: f.label,
+    type: f.type,
+    helper_text: null,
+    required: f.required,
+    char_limit: null,
+    options: null,
+    order: i,
+  }));
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl px-3 py-2 text-xs" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "var(--color-blue)" }}>
+        👁 This is how your public event page will look. Branding, logos, and banner can be refined after creation.
+      </div>
+      <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--color-border)", maxHeight: "600px", overflowY: "auto" }}>
+        <PublicEventView event={mockEvent} branding={mockBranding} faq={mockFaq} fields={mockFields} preview />
+      </div>
+    </div>
+  );
+}
+
 function StepPublish({ state, set, eventId }: { state: WizardState; set: (p: Partial<WizardState>) => void; eventId: string | null }) {
   const joinCodeUrl = eventId ? `/e/[join-code]` : "";
-  const CHECKLIST = [
-    { label: "Event details",        done: !!(state.name && state.description) },
-    { label: "Schedule set",         done: !!(state.startDate && state.endDate) },
-    { label: "Venue selected",       done: !!(state.venueType) },
-    { label: "Branding configured",  done: true },
-    { label: "Judging criteria set", done: state.criteria.length > 0 },
-    { label: "Form fields added",    done: state.formFields.length > 0 },
-    { label: "FAQs added",           done: state.faqs.length > 0 },
+
+  const REQUIRED = [
+    { label: "Event name",        done: !!state.name.trim() },
+    { label: "Description",       done: !!state.description.trim() },
+    { label: "Start date",        done: !!state.startDate },
+    { label: "End date",          done: !!state.endDate },
+    { label: "Venue / format",    done: !!state.venueType },
+    { label: "Submission form",   done: state.formFields.length > 0 },
   ];
 
-  const allGood = CHECKLIST.filter(c => !c.done).length === 0;
+  const OPTIONAL = [
+    { label: "Judging criteria",  done: state.criteria.length > 0 },
+    { label: "FAQs",              done: state.faqs.length > 0 },
+  ];
+
+  const canPublish = REQUIRED.every(c => c.done);
+  const missingRequired = REQUIRED.filter(c => !c.done);
 
   return (
     <div className="space-y-5">
-      {/* Checklist */}
+      {/* Required checklist */}
+      <div className="card space-y-3" style={{
+        border: canPublish ? "1px solid rgba(0,199,88,0.3)" : "1px solid rgba(255,101,104,0.4)",
+        background: canPublish ? "rgba(0,199,88,0.04)" : "rgba(255,101,104,0.04)",
+      }}>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>Required to publish</p>
+          {canPublish
+            ? <span className="text-xs font-semibold" style={{ color: "#00c758" }}>✓ All set</span>
+            : <span className="text-xs" style={{ color: "#ff6568" }}>{missingRequired.length} missing</span>
+          }
+        </div>
+        {REQUIRED.map(item => (
+          <div key={item.label} className="flex items-center gap-3 text-sm">
+            <span style={{ color: item.done ? "#00c758" : "#ff6568" }}>{item.done ? "✓" : "✗"}</span>
+            <span style={{ color: item.done ? "var(--color-text-muted)" : "var(--color-text)", textDecoration: item.done ? "line-through" : "none" }}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Optional checklist */}
       <div className="card space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>Setup Checklist</p>
-        {CHECKLIST.map(item => (
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>Optional (recommended)</p>
+        {OPTIONAL.map(item => (
           <div key={item.label} className="flex items-center gap-3 text-sm">
             <span style={{ color: item.done ? "#00c758" : "#f99c00" }}>{item.done ? "✓" : "○"}</span>
-            <span style={{ color: item.done ? "var(--color-text)" : "var(--color-text-sec)" }}>{item.label}</span>
-            {!item.done && <span className="text-xs ml-auto" style={{ color: "var(--color-text-muted)" }}>optional</span>}
+            <span style={{ color: "var(--color-text-sec)" }}>{item.label}</span>
+            {!item.done && <span className="text-xs ml-auto" style={{ color: "var(--color-text-muted)" }}>can add later</span>}
           </div>
         ))}
       </div>
@@ -959,24 +1080,29 @@ function StepPublish({ state, set, eventId }: { state: WizardState; set: (p: Par
             <span className="text-sm font-semibold" style={{ color: !state.publishNow ? "var(--color-blue)" : "var(--color-text)" }}>Save as Draft</span>
             <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Only you can see it</span>
           </button>
-          <button onClick={() => set({ publishNow: true })}
+          <button
+            onClick={() => canPublish && set({ publishNow: true })}
             className="flex flex-col items-start gap-1 p-4 rounded-xl transition-all"
             style={{
               background: state.publishNow ? "rgba(0,199,88,0.1)" : "var(--color-bg)",
-              border: `1px solid ${state.publishNow ? "rgba(0,199,88,0.4)" : "var(--color-border)"}`,
+              border: `1px solid ${state.publishNow ? "rgba(0,199,88,0.4)" : canPublish ? "var(--color-border)" : "rgba(255,101,104,0.2)"}`,
+              opacity: canPublish ? 1 : 0.45,
+              cursor: canPublish ? "pointer" : "not-allowed",
             }}>
             <span className="text-lg">🚀</span>
             <span className="text-sm font-semibold" style={{ color: state.publishNow ? "#00c758" : "var(--color-text)" }}>Publish Now</span>
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Public page goes live</span>
+            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              {canPublish ? "Public page goes live" : "Complete required fields first"}
+            </span>
           </button>
         </div>
 
-        {state.publishNow && !allGood && (
-          <p className="text-xs" style={{ color: "#f99c00" }}>
-            ⚠ Some optional items are missing — you can still publish and fill them in later.
+        {!canPublish && (
+          <p className="text-xs" style={{ color: "#ff6568" }}>
+            Complete the required fields above before you can publish. You can save as Draft and publish later.
           </p>
         )}
-        {state.publishNow && (
+        {state.publishNow && canPublish && (
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
             Your event will be live at <code className="px-1 rounded" style={{ background: "var(--color-bg)", color: "var(--color-blue)" }}>{joinCodeUrl}</code>
           </p>

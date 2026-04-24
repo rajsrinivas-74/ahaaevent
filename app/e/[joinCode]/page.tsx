@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { PublicEventView } from "@/app/(app)/events/[id]/preview/page";
+import { PublicEventView } from "@/components/public-event-view";
 import type { Event, EventBranding, EventFaq, FormField, FormSection } from "@/lib/types";
 
 async function getEventData(joinCode: string) {
