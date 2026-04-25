@@ -34,7 +34,7 @@ function IconLoader({ size = 16 }: { size?: number }) {
 }
 
 const SOURCES = [
-  { value: "ai_orchestration_labs", label: "AI Orchestration Labs training program" },
+  { value: "ai_orchestration_labs", label: "Internal Learning Project" },
   { value: "independent_hackathon", label: "Independent hackathon" },
   { value: "college_event", label: "College / university event" },
   { value: "personal_project", label: "Personal project" },
@@ -393,14 +393,27 @@ export default function SubmitPage() {
           >
             Submitted
           </h1>
-          <p style={{ color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: "0.5rem" }}>
-            {form.wants_report
-              ? "We will run the AhaaIQ parser on your repo and email you when your Navigator score is ready."
-              : "We will run the AhaaIQ parser on your repo. Thank you for contributing anonymously."}
-          </p>
-          <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
-            Thank you for helping build AhaaIQ.
-          </p>
+          {form.wants_report ? (
+            <>
+              <p style={{ color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: "0.5rem" }}>
+                We will run the AhaaIQ parser on your repo and send your Navigator score to{" "}
+                <span style={{ color: "var(--color-blue)", fontWeight: 500 }}>{form.email}</span>.
+              </p>
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                Thank you for helping build AhaaIQ, {form.first_name}.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: "0.5rem" }}>
+                Your submission has been recorded anonymously. We will run the AhaaIQ parser on
+                your repo and the data will contribute to training the model.
+              </p>
+              <p style={{ color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
+                Thank you for contributing.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -641,9 +654,9 @@ export default function SubmitPage() {
           {/* Section 3 — Your Approach */}
           <SectionCard index={3} title="Your Approach" complete={isSectionComplete("Your Approach", form)}>
             <div style={fieldStyle}>
-              <label style={labelStyle}>What did you do before opening your AI tool?</label>
+              <label style={labelStyle}>What did you do before opening your coding agent?</label>
               <p style={helperStyle}>
-                There are no wrong answers. A student who let AI do everything is as valuable to us
+                There are no wrong answers. An engineer who let AI do everything is as valuable to us
                 as one who planned for an hour. We need both.
               </p>
               <textarea
@@ -730,7 +743,7 @@ export default function SubmitPage() {
           {/* Section 4 — Your Repo */}
           <SectionCard index={4} title="Your Repo" complete={isSectionComplete("Your Repo", form)}>
             <div style={fieldStyle}>
-              <label style={labelStyle}>Public GitHub repo URL</label>
+              <label style={labelStyle}>Your coding agent session log (GitHub repo)</label>
               <div style={{ position: "relative" }}>
                 <div
                   style={{
@@ -752,7 +765,7 @@ export default function SubmitPage() {
                   required
                 />
               </div>
-              <p style={helperStyle}>Must be public and have at least 5 commits</p>
+              <p style={helperStyle}>This is a hypothesis test — commit patterns and branch history reveal how you navigated your coding agent, not how well you code.</p>
             </div>
 
             <div style={{ ...fieldStyle, marginBottom: 0 }}>

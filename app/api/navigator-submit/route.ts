@@ -52,6 +52,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (wants_report && email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return NextResponse.json(
+          { error: "Please enter a valid email address." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const repoPath = repo_url.trim().replace("https://github.com/", "").replace(/\/$/, "");
+    const githubHeaders: HeadersInit = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "AhaaIQ-Submit",
+      ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+    };
+    const githubRes = await fetch(`https://api.github.com/repos/${repoPath}`, {
+      headers: githubHeaders,
+    });
+    if (githubRes.status === 404) {
+      return NextResponse.json(
+        { error: "Repo not found or is private. Make sure the repo is public before submitting." },
+        { status: 400 }
+      );
+    }
+    if (!githubRes.ok) {
+      return NextResponse.json(
+        { error: "Could not verify the GitHub repo. Please check the URL and try again." },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceRoleClient();
 
     const { error: dbError } = await supabase
