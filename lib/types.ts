@@ -102,3 +102,26 @@ export interface EventFaq {
   answer: string;
   order: number;
 }
+
+export type NavigatorSubmissionStatus = "submitted" | "parsed" | "scored";
+
+export interface NavigatorSubmission {
+  id: string;
+  created_at: string;
+  consent_data: boolean;
+  wants_report: boolean;
+  first_name: string | null;
+  email: string | null;
+  source: string;
+  problem_statement: string;
+  domain: string;
+  duration: string;
+  pre_ai_thinking: string;
+  ai_tools: string[];
+  brief_quality: string;
+  ai_redirections: string;
+  self_tested: string;
+  repo_url: string;
+  extra_context: string | null;
+  status: NavigatorSubmissionStatus;
+}
