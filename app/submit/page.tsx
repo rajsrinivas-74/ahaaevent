@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 function IconGithub({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
@@ -9,11 +10,10 @@ function IconGithub({ size = 18, color = "currentColor" }: { size?: number; colo
   );
 }
 
-function IconCheck({ size = 32 }: { size?: number }) {
+function IconCheck({ size = 32, color = "currentColor" }: { size?: number; color?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
@@ -80,6 +80,10 @@ const TESTED_OPTIONS = [
   { value: "no", label: "No" },
 ];
 
+// Sections in display order (consent + report are in header/footer, not counted)
+const SECTIONS = ["About You", "The Problem", "Your Approach", "Your Repo"] as const;
+type SectionName = typeof SECTIONS[number];
+
 type FormState = {
   consent_data: boolean;
   wants_report: boolean;
@@ -115,6 +119,19 @@ const INITIAL: FormState = {
   repo_url: "",
   extra_context: "",
 };
+
+function isSectionComplete(section: SectionName, form: FormState): boolean {
+  switch (section) {
+    case "About You":
+      return !!form.source;
+    case "The Problem":
+      return !!(form.problem_statement.trim() && form.domain && form.duration);
+    case "Your Approach":
+      return !!(form.pre_ai_thinking.trim() && form.brief_quality && form.ai_redirections && form.self_tested);
+    case "Your Repo":
+      return !!form.repo_url.trim();
+  }
+}
 
 function RadioOption({
   name,
@@ -198,12 +215,14 @@ function CheckOption({
 }
 
 function SectionCard({
-  number,
+  index,
   title,
+  complete,
   children,
 }: {
-  number: string;
+  index: number;
   title: string;
+  complete: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -214,23 +233,75 @@ function SectionCard({
             width: "1.75rem",
             height: "1.75rem",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+            background: complete
+              ? "rgba(0,199,88,0.15)"
+              : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+            border: complete ? "1px solid rgba(0,199,88,0.4)" : "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: "0.75rem",
             fontWeight: 700,
-            color: "#fff",
+            color: complete ? "#00c758" : "#fff",
             flexShrink: 0,
+            transition: "all 0.2s",
           }}
         >
-          {number}
+          {complete ? <IconCheck size={14} color="#00c758" /> : index}
         </div>
-        <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text)", margin: 0 }}>
+        <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text)", margin: 0, flex: 1 }}>
           {title}
         </h2>
+        {complete && (
+          <span style={{ fontSize: "0.7rem", color: "#00c758", fontWeight: 600 }}>Done</span>
+        )}
       </div>
       {children}
+    </div>
+  );
+}
+
+function ProgressBar({ form }: { form: FormState }) {
+  const completed = SECTIONS.filter((s) => isSectionComplete(s, form)).length;
+  const pct = Math.round((completed / SECTIONS.length) * 100);
+
+  return (
+    <div style={{ marginBottom: "2rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.5rem",
+        }}
+      >
+        <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+          {completed} of {SECTIONS.length} sections complete
+        </span>
+        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: pct === 100 ? "#00c758" : "var(--color-blue)" }}>
+          {pct}%
+        </span>
+      </div>
+      <div
+        style={{
+          height: "4px",
+          borderRadius: "9999px",
+          background: "var(--color-border)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            borderRadius: "9999px",
+            background: pct === 100
+              ? "#00c758"
+              : "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+            transition: "width 0.3s ease",
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -276,6 +347,7 @@ export default function SubmitPage() {
         return;
       }
       setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setError("Network error. Please check your connection and try again.");
     } finally {
@@ -298,35 +370,30 @@ export default function SubmitPage() {
         <div style={{ textAlign: "center", maxWidth: "28rem" }}>
           <div
             style={{
-              width: "4rem",
-              height: "4rem",
+              width: "5rem",
+              height: "5rem",
               borderRadius: "50%",
-              background: "rgba(96,165,250,0.15)",
+              background: "rgba(0,199,88,0.12)",
+              border: "1px solid rgba(0,199,88,0.3)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 1.5rem",
+              margin: "0 auto 1.75rem",
             }}
           >
-            <IconCheck size={32} />
+            <IconCheck size={36} color="#00c758" />
           </div>
           <h1
             style={{
               fontSize: "1.5rem",
               fontWeight: 700,
               color: "var(--color-text)",
-              marginBottom: "0.75rem",
+              marginBottom: "0.875rem",
             }}
           >
             Submitted
           </h1>
-          <p
-            style={{
-              color: "var(--color-text-sec)",
-              lineHeight: 1.6,
-              marginBottom: "0.5rem",
-            }}
-          >
+          <p style={{ color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: "0.5rem" }}>
             {form.wants_report
               ? "We will run the AhaaIQ parser on your repo and email you when your Navigator score is ready."
               : "We will run the AhaaIQ parser on your repo. Thank you for contributing anonymously."}
@@ -367,26 +434,15 @@ export default function SubmitPage() {
   const fieldStyle: React.CSSProperties = { marginBottom: "1.25rem" };
   const gridStyle: React.CSSProperties = { display: "grid", gap: "0.5rem" };
 
+  const allSectionsComplete = SECTIONS.every((s) => isSectionComplete(s, form));
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--color-bg)",
-        padding: "3rem 1rem 4rem",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "var(--color-bg)", padding: "3rem 1rem 6rem" }}>
       <div style={{ maxWidth: "42rem", margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ marginBottom: "2.5rem" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginBottom: "1.25rem",
-            }}
-          >
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
             <div
               style={{
                 width: "2.5rem",
@@ -400,13 +456,7 @@ export default function SubmitPage() {
             >
               <IconGithub size={18} color="#fff" />
             </div>
-            <span
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                color: "var(--color-text-muted)",
-              }}
-            >
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
               AhaaIQ
             </span>
           </div>
@@ -422,84 +472,109 @@ export default function SubmitPage() {
           >
             Submit Your Project
           </h1>
-
-          <p
-            style={{
-              color: "var(--color-text-sec)",
-              lineHeight: 1.7,
-              marginBottom: "0.75rem",
-            }}
-          >
+          <p style={{ color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: "0.5rem" }}>
             AhaaIQ evaluates how developers navigate Gen AI tools during a build — not just what
             they built, but how they thought, directed, and controlled the AI to get there.
           </p>
-          <p
-            style={{
-              color: "var(--color-text-sec)",
-              lineHeight: 1.7,
-              marginBottom: "0.75rem",
-            }}
-          >
-            Submit your project repo and a short context form. We will run the AhaaIQ parser on
-            your repo. If you want your Navigator score, add your name and email at the end.
-          </p>
-          <p
-            style={{
-              color: "var(--color-text-muted)",
-              fontSize: "0.8125rem",
-              lineHeight: 1.6,
-            }}
-          >
+          <p style={{ color: "var(--color-text-muted)", fontSize: "0.8125rem", lineHeight: 1.6 }}>
             Your data is used anonymously to train the model. Your name and repo will never appear
-            in any output or public dataset. Your data will never be sold or shared with third
-            parties.
+            in any output or public dataset. Never sold or shared with third parties.
           </p>
         </div>
 
+        {/* Consent — in header, not a numbered section */}
+        <label
+          style={{
+            display: "flex",
+            gap: "0.875rem",
+            padding: "1rem",
+            borderRadius: "0.75rem",
+            border: `1px solid ${form.consent_data ? "var(--color-blue)" : "var(--color-border)"}`,
+            background: form.consent_data ? "rgba(96,165,250,0.06)" : "var(--color-card)",
+            cursor: "pointer",
+            marginBottom: "1rem",
+            transition: "all 0.15s",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={form.consent_data}
+            onChange={(e) => set("consent_data", e.target.checked)}
+            style={{ accentColor: "var(--color-blue)", marginTop: "0.125rem", flexShrink: 0 }}
+          />
+          <span style={{ fontSize: "0.875rem", color: "var(--color-text)", lineHeight: 1.6 }}>
+            I agree that my anonymised project data may be used to train AhaaIQ&apos;s evaluation
+            model. My name and repo URL will never appear in any output or public dataset.{" "}
+            <span style={{ color: "var(--color-pink)", fontWeight: 600 }}>Required to submit</span>
+          </span>
+        </label>
+
+        {/* Report opt-in — early, before sections */}
+        <div
+          className="card"
+          style={{ marginBottom: "2rem", background: "rgba(167,139,250,0.05)", borderColor: "rgba(167,139,250,0.25)" }}
+        >
+          <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text)", marginBottom: "0.75rem" }}>
+            Do you want your Navigator score when it is ready?
+          </p>
+          <div style={{ ...gridStyle, marginBottom: form.wants_report ? "1rem" : 0 }}>
+            <RadioOption
+              name="wants_report"
+              value="yes"
+              label="Yes — send it to me"
+              checked={form.wants_report === true}
+              onChange={() => set("wants_report", true)}
+            />
+            <RadioOption
+              name="wants_report"
+              value="no"
+              label="No — I am submitting anonymously"
+              checked={form.wants_report === false && form.source !== ""}
+              onChange={() => {
+                set("wants_report", false);
+                set("first_name", "");
+                set("email", "");
+              }}
+            />
+          </div>
+
+          {form.wants_report && (
+            <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
+              <div>
+                <label style={labelStyle}>First name</label>
+                <input
+                  style={inputStyle}
+                  value={form.first_name}
+                  onChange={(e) => set("first_name", e.target.value)}
+                  placeholder="Your first name"
+                  required={form.wants_report}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Email address</label>
+                <input
+                  style={inputStyle}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => set("email", e.target.value)}
+                  placeholder="you@example.com"
+                  required={form.wants_report}
+                />
+              </div>
+              <p style={{ ...helperStyle, gridColumn: "1 / -1", marginTop: 0 }}>
+                Only used to send your Navigator score. Never used for anything else.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <ProgressBar form={form} />
+
         <form onSubmit={handleSubmit}>
 
-          {/* Section 1 — Consent */}
-          <SectionCard number="1" title="Consent">
-            <label
-              style={{
-                display: "flex",
-                gap: "0.875rem",
-                padding: "1rem",
-                borderRadius: "0.75rem",
-                border: `1px solid ${form.consent_data ? "var(--color-blue)" : "var(--color-border)"}`,
-                background: form.consent_data ? "rgba(96,165,250,0.06)" : "transparent",
-                cursor: "pointer",
-                marginBottom: "0.75rem",
-                transition: "all 0.15s",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={form.consent_data}
-                onChange={(e) => set("consent_data", e.target.checked)}
-                style={{
-                  accentColor: "var(--color-blue)",
-                  marginTop: "0.125rem",
-                  flexShrink: 0,
-                }}
-              />
-              <span
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--color-text)",
-                  lineHeight: 1.6,
-                }}
-              >
-                I agree that my anonymised project data may be used to train AhaaIQ&apos;s
-                evaluation model. My name and repo URL will never appear in any output or public
-                dataset.{" "}
-                <span style={{ color: "var(--color-pink)", fontWeight: 600 }}>Required</span>
-              </span>
-            </label>
-          </SectionCard>
-
-          {/* Section 2 — About You */}
-          <SectionCard number="2" title="About You">
+          {/* Section 1 — About You */}
+          <SectionCard index={1} title="About You" complete={isSectionComplete("About You", form)}>
             <div style={{ ...fieldStyle, marginBottom: 0 }}>
               <label style={labelStyle}>Where did you build this project?</label>
               <div style={gridStyle}>
@@ -517,12 +592,10 @@ export default function SubmitPage() {
             </div>
           </SectionCard>
 
-          {/* Section 3 — The Problem */}
-          <SectionCard number="3" title="The Problem">
+          {/* Section 2 — The Problem */}
+          <SectionCard index={2} title="The Problem" complete={isSectionComplete("The Problem", form)}>
             <div style={fieldStyle}>
-              <label style={labelStyle}>
-                Paste the exact problem statement you were given
-              </label>
+              <label style={labelStyle}>Paste the exact problem statement you were given</label>
               <textarea
                 style={{ ...inputStyle, minHeight: "7rem", resize: "vertical" }}
                 value={form.problem_statement}
@@ -534,12 +607,7 @@ export default function SubmitPage() {
 
             <div style={fieldStyle}>
               <label style={labelStyle}>Domain</label>
-              <div
-                style={{
-                  ...gridStyle,
-                  gridTemplateColumns: "repeat(auto-fill, minmax(9rem, 1fr))",
-                }}
-              >
+              <div style={{ ...gridStyle, gridTemplateColumns: "repeat(auto-fill, minmax(9rem, 1fr))" }}>
                 {DOMAINS.map((d) => (
                   <RadioOption
                     key={d.value}
@@ -570,23 +638,16 @@ export default function SubmitPage() {
             </div>
           </SectionCard>
 
-          {/* Section 4 — Your Approach */}
-          <SectionCard number="4" title="Your Approach">
+          {/* Section 3 — Your Approach */}
+          <SectionCard index={3} title="Your Approach" complete={isSectionComplete("Your Approach", form)}>
             <div style={fieldStyle}>
-              <label style={labelStyle}>
-                What did you do before opening your AI tool?
-              </label>
+              <label style={labelStyle}>What did you do before opening your AI tool?</label>
               <p style={helperStyle}>
-                There are no wrong answers. A student who let AI do everything is as
-                valuable to us as one who planned for an hour. We need both.
+                There are no wrong answers. A student who let AI do everything is as valuable to us
+                as one who planned for an hour. We need both.
               </p>
               <textarea
-                style={{
-                  ...inputStyle,
-                  minHeight: "6rem",
-                  resize: "vertical",
-                  marginTop: "0.375rem",
-                }}
+                style={{ ...inputStyle, minHeight: "6rem", resize: "vertical", marginTop: "0.375rem" }}
                 value={form.pre_ai_thinking}
                 onChange={(e) => set("pre_ai_thinking", e.target.value)}
                 placeholder="Describe what you thought through before starting..."
@@ -617,9 +678,7 @@ export default function SubmitPage() {
             </div>
 
             <div style={fieldStyle}>
-              <label style={labelStyle}>
-                Did you write a brief before starting?
-              </label>
+              <label style={labelStyle}>Did you write a brief before starting?</label>
               <div style={gridStyle}>
                 {BRIEF_OPTIONS.map((o) => (
                   <RadioOption
@@ -635,15 +694,9 @@ export default function SubmitPage() {
             </div>
 
             <div style={fieldStyle}>
-              <label style={labelStyle}>
-                How many times did you redirect or correct the AI?
-              </label>
-              <div
-                style={{
-                  ...gridStyle,
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                }}
-              >
+              <label style={labelStyle}>How many times did you redirect or correct the AI?</label>
+              {/* 2-col grid on mobile to avoid cramping */}
+              <div style={{ ...gridStyle, gridTemplateColumns: "repeat(2, 1fr)" }}>
                 {REDIRECTION_OPTIONS.map((o) => (
                   <RadioOption
                     key={o.value}
@@ -658,9 +711,7 @@ export default function SubmitPage() {
             </div>
 
             <div style={{ ...fieldStyle, marginBottom: 0 }}>
-              <label style={labelStyle}>
-                Did you test the output yourself before finishing?
-              </label>
+              <label style={labelStyle}>Did you test the output yourself before finishing?</label>
               <div style={gridStyle}>
                 {TESTED_OPTIONS.map((o) => (
                   <RadioOption
@@ -676,8 +727,8 @@ export default function SubmitPage() {
             </div>
           </SectionCard>
 
-          {/* Section 5 — Your Repo */}
-          <SectionCard number="5" title="Your Repo">
+          {/* Section 4 — Your Repo */}
+          <SectionCard index={4} title="Your Repo" complete={isSectionComplete("Your Repo", form)}>
             <div style={fieldStyle}>
               <label style={labelStyle}>Public GitHub repo URL</label>
               <div style={{ position: "relative" }}>
@@ -707,9 +758,7 @@ export default function SubmitPage() {
             <div style={{ ...fieldStyle, marginBottom: 0 }}>
               <label style={labelStyle}>
                 Any context the evaluator should know?{" "}
-                <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>
-                  Optional
-                </span>
+                <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>Optional</span>
               </label>
               <textarea
                 style={{ ...inputStyle, minHeight: "5rem", resize: "vertical" }}
@@ -718,64 +767,6 @@ export default function SubmitPage() {
                 placeholder="Team size, constraints, incomplete features..."
               />
             </div>
-          </SectionCard>
-
-          {/* Section 6 — Your Report */}
-          <SectionCard number="6" title="Your Report">
-            <div style={fieldStyle}>
-              <label style={labelStyle}>
-                Do you want your Navigator score when it is ready?
-              </label>
-              <div style={gridStyle}>
-                <RadioOption
-                  name="wants_report"
-                  value="yes"
-                  label="Yes — send it to me"
-                  checked={form.wants_report === true}
-                  onChange={() => set("wants_report", true)}
-                />
-                <RadioOption
-                  name="wants_report"
-                  value="no"
-                  label="No — I am submitting anonymously"
-                  checked={form.wants_report === false && form.source !== ""}
-                  onChange={() => {
-                    set("wants_report", false);
-                    set("first_name", "");
-                    set("email", "");
-                  }}
-                />
-              </div>
-            </div>
-
-            {form.wants_report && (
-              <>
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>First name</label>
-                  <input
-                    style={inputStyle}
-                    value={form.first_name}
-                    onChange={(e) => set("first_name", e.target.value)}
-                    placeholder="Your first name"
-                    required={form.wants_report}
-                  />
-                </div>
-                <div style={{ ...fieldStyle, marginBottom: 0 }}>
-                  <label style={labelStyle}>Email address</label>
-                  <input
-                    style={inputStyle}
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    placeholder="you@example.com"
-                    required={form.wants_report}
-                  />
-                  <p style={helperStyle}>
-                    Only used to send your Navigator score. Never used for anything else.
-                  </p>
-                </div>
-              </>
-            )}
           </SectionCard>
 
           {error && (
@@ -794,6 +785,7 @@ export default function SubmitPage() {
             </div>
           )}
 
+          {/* Inline submit (desktop) */}
           <button
             type="submit"
             className="btn-primary"
@@ -810,17 +802,61 @@ export default function SubmitPage() {
             )}
           </button>
 
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: "0.75rem",
-              color: "var(--color-text-muted)",
-              marginTop: "1rem",
-            }}
-          >
+          <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "1rem" }}>
             Takes 5 minutes · Data used anonymously · Never sold or shared
           </p>
         </form>
+      </div>
+
+      {/* Sticky bottom bar — mobile only */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "0.875rem 1rem",
+          background: "var(--color-card)",
+          borderTop: "1px solid var(--color-border)",
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          zIndex: 40,
+        }}
+        className="md:hidden"
+      >
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              height: "4px",
+              borderRadius: "9999px",
+              background: "var(--color-border)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.round((SECTIONS.filter((s) => isSectionComplete(s, form)).length / SECTIONS.length) * 100)}%`,
+                borderRadius: "9999px",
+                background: allSectionsComplete ? "#00c758" : "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+                transition: "width 0.3s ease",
+              }}
+            />
+          </div>
+          <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
+            {SECTIONS.filter((s) => isSectionComplete(s, form)).length} of {SECTIONS.length} done
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={submitting}
+          onClick={handleSubmit as unknown as React.MouseEventHandler}
+          style={{ flexShrink: 0 }}
+        >
+          {submitting ? <IconLoader size={16} /> : "Submit"}
+        </button>
       </div>
     </div>
   );
